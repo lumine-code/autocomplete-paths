@@ -1,0 +1,13 @@
+{
+  "menu": [
+    {
+      "label": "Packages",
+      "submenu": [
+        {
+          "label": "Rebuild Path Suggestions",
+          "command": "autocomplete-paths:rebuild-cache"
+        }
+      ]
+    }
+  ]
+}

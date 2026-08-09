@@ -1,103 +1,85 @@
-/** @babel */
-
-function waitsFor(escapeFunction, timeoutError = null, escapeTime = null) {
-  return new Promise((resolve, reject) => {
-    // check the escapeFunction every millisecond so as soon as it is met we can escape the function
-    const interval = setInterval(function () {
-      if (escapeFunction()) {
-        clearMe()
-        resolve()
-      }
-    }, 1)
-
-    // in case we never reach the escapeFunction, we will time out at the escapeTime
-    const timeOut = escapeTime
-      ? setTimeout(function () {
-          clearMe()
-          reject(timeoutError)
-        }, escapeTime)
-      : null
-
-    // clear the interval and the timeout
-    function clearMe() {
-      clearInterval(interval)
-      clearTimeout(timeOut)
-    }
-  })
-}
-
-const COMPLETION_DELAY = 100
+const path = require("node:path");
+const { it, beforeEach } = require("./async-spec-helpers");
 
 describe("autocomplete-paths", () => {
-  let editor, provider
-  const getSuggestions = () => {
-    const cursor = editor.getLastCursor()
-    const start = cursor.getBeginningOfCurrentWordBufferPosition()
-    const end = cursor.getBufferPosition()
-    const prefix = editor.getTextInRange([start, end])
-    const request = {
-      editor,
-      bufferPosition: end,
-      scopeDescriptor: cursor.getScopeDescriptor(),
-      prefix,
-    }
-    return provider.getSuggestions(request)
-  }
+  let editor;
+  let provider;
+  let projectDirectory;
 
   beforeEach(async () => {
-    atom.config.set("autocomplete-plus.enableAutoActivation", true)
-    atom.config.set("autocomplete-plus.autoActivationDelay", COMPLETION_DELAY)
-    atom.config.set("autocomplete-paths.ignoredPatterns", ["**/tests"])
+    lumine.config.set("autocomplete-paths.ignoredPatterns", ["**/tests/**"]);
+    lumine.config.set("core.excludeVcsIgnoredPaths", false);
+    jasmine.attachToDOM(lumine.workspace.getElement());
 
-    const workspaceElement = atom.views.getView(atom.workspace)
-    jasmine.attachToDOM(workspaceElement)
+    await lumine.packages.activatePackage("language-javascript");
+    const pack = await lumine.packages.activatePackage("autocomplete-paths");
+    editor = await lumine.workspace.open(path.join(__dirname, "fixtures", "tests", "test-file.js"));
+    provider = pack.mainModule.getProvider();
+    await provider.rebuildCache();
+    projectDirectory = lumine.project.getDirectories()[0];
+  });
 
-    await Promise.all([
-      atom.workspace.open("sample.js").then((e) => {
-        editor = e
-      }),
-      atom.packages.activatePackage("language-javascript"),
-      atom.packages.activatePackage("autocomplete-paths"),
-      atom.packages.activatePackage("autocomplete-plus"),
-      atom.packages.activatePackage("status-bar"),
-    ])
+  async function suggestionsFor(text) {
+    editor.setText(text);
+    editor.setCursorBufferPosition([0, Infinity]);
+    const cursor = editor.getLastCursor();
+    return provider.getSuggestions({
+      editor,
+      bufferPosition: cursor.getBufferPosition(),
+      scopeDescriptor: cursor.getScopeDescriptor(),
+      prefix: cursor.getCurrentWordBufferRange
+        ? editor.getTextInBufferRange(cursor.getCurrentWordBufferRange())
+        : "",
+    });
+  }
 
-    provider = atom.packages.getActivePackage("autocomplete-paths").mainModule.getProvider()
-    await waitsFor(() => provider.isReady())
-  })
+  it("caches eligible project files", () => {
+    const files = provider.pathsCache.getFilePathsForProjectDirectory(projectDirectory);
+    expect(files.some((filePath) => filePath.endsWith(path.join("somedir", "testfile.js")))).toBe(
+      true,
+    );
+    expect(files.some((filePath) => filePath.includes(`${path.sep}tests${path.sep}`))).toBe(false);
+    expect(provider.isReady()).toBe(true);
+  });
 
-  it("triggers when text before cursor matches one of the scopes", async () => {
-    editor.setText("require('t")
-    editor.setCursorBufferPosition([0, Infinity])
-    const suggestions = await getSuggestions()
+  it("suggests matching JavaScript paths", async () => {
+    const suggestions = await suggestionsFor("require('test");
+    expect(suggestions.map(({ displayText }) => displayText)).toEqual([
+      "somedir/testfile.js",
+      "somedir/testdir/nested-test-file.js",
+    ]);
+  });
 
-    expect(suggestions).toHaveLength(2)
-  })
+  it("inserts relative paths without JavaScript extensions", async () => {
+    const suggestions = await suggestionsFor("require('testfile");
+    expect(suggestions[0].text).toBe("../somedir/testfile");
+    expect(suggestions[0].replacementPrefix).toBe("testfile");
+  });
 
-  it("only displays files relevant to the matching scope", async () => {
-    await atom.packages.activatePackage("language-javascript")
-    editor.setText("require('t")
-    editor.setCursorBufferPosition([0, Infinity])
-    const suggestions = await getSuggestions()
+  it("narrows suggestions inside an explicitly typed directory", async () => {
+    const suggestions = await suggestionsFor("require('../somedir/test");
+    expect(suggestions.map(({ displayText }) => displayText)).toContain("testfile.js");
+    expect(suggestions.every(({ text }) => text.startsWith("../somedir/"))).toBe(true);
+  });
 
-    expect(suggestions).toHaveLength(2)
-    expect(suggestions[0].displayText).toBe("somedir/testfile.js")
-    expect(suggestions[1].displayText).toBe("somedir/testdir/nested-test-file.js")
-  })
+  it("updates created, renamed, and deleted paths incrementally", () => {
+    const rootPath = projectDirectory.getPath();
+    const createdPath = path.join(rootPath, "somedir", "created.js");
+    const renamedPath = path.join(rootPath, "somedir", "renamed.js");
 
-  it("removes the extension when accepting a JS import suggestion", async () => {
-    await atom.packages.activatePackage("language-javascript")
-    const editorView = atom.views.getView(editor)
-    editor.setText("require('")
-    editor.moveToBottom()
-    editor.insertText("t")
-    editor.insertText("e")
-    editor.insertText("s")
-
-    await waitsFor(() => editorView.querySelector(".autocomplete-plus"), "autocomplete view to appear", 1000)
-
-    atom.commands.dispatch(editorView, "autocomplete-plus:confirm")
-
-    expect(editor.getText()).toEqual("require('./somedir/testfile")
-  })
-})
+    provider.pathsCache.onDidChangeFiles([{ action: "created", path: createdPath }]);
+    expect(provider.pathsCache.getFilePathsForProjectDirectory(projectDirectory)).toContain(
+      createdPath,
+    );
+    provider.pathsCache.onDidChangeFiles([
+      { action: "renamed", oldPath: createdPath, path: renamedPath },
+    ]);
+    expect(provider.pathsCache.getFilePathsForProjectDirectory(projectDirectory)).toContain(
+      renamedPath,
+    );
+    provider.pathsCache.onDidChangeFiles([{ action: "deleted", path: renamedPath }]);
+    expect(provider.pathsCache.getFilePathsForProjectDirectory(projectDirectory)).not.toContain(
+      renamedPath,
+    );
+  });
+});

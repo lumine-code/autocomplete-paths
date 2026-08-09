@@ -1,55 +1,34 @@
-# autocomplete+ paths suggestions [![Build Status](https://travis-ci.org/atom-community/autocomplete-paths.svg?branch=master)](https://travis-ci.org/atom-community/autocomplete-paths)
+# autocomplete-paths
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/atom-community/autocomplete-paths?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
-[View the changelog](https://github.com/atom-community/autocomplete-paths/blob/master/CHANGELOG.md)
-
-Adds path autocompletion to autocomplete+ depending on scope and prefix. Supports custom scopes defined by the user.
-
-![autocomplete-paths](http://fs5.directupload.net/images/160215/5tdhz7c4.gif)
+Complete file paths from cached project contents.
 
 ## Features
 
-- Support for JavaScript, CoffeeScript, TypeScript, PHP, SASS, LESS, Stylus, CSS, C, C++, Lua, Ruby and Python
-- Very efficient thanks to caching and incremental cache rebuilds (incremental builds are [disabled for Windows](https://github.com/atom/node-pathwatcher/issues/70). Please use the `Rebuild Cache` command.)
-- Easily extendable
+- **Import completion**: suggests matching project files in JavaScript, TypeScript, CSS, HTML, PHP, Python, Ruby, Lua, and C-family paths.
+- **Relative paths**: inserts paths relative to the active file and optionally includes the current-directory prefix.
+- **Project paths**: supports project-root-relative suggestions for custom scope definitions.
+- **Incremental cache**: updates created, renamed, and deleted files from Lumine project events.
+- **Ignore handling**: respects repository ignores, core ignored names, submodules, and custom glob patterns.
+- **Image previews**: can show local image thumbnails directly in suggestions.
 
 ## Installation
 
-You can install autocomplete-paths using the Preferences pane.
+To install `autocomplete-paths` search for _autocomplete-paths_ in the Install pane of the Lumine settings or run `lumine --install lumine-code/autocomplete-paths`.
 
-## Defining scopes
+## Commands
 
-`autocomplete-paths` triggers whenever a scope matches the current cursor position and scope
-descriptor. Here is an example for a JavaScript-Scope that supports the ES6 'import' syntax as
-well as the CommonJS `require()` syntax and the RequireJS `define()` syntax:
+Commands available in `lumine-workspace`:
 
-```js
-{
-  scopes: ['source.js'], // Only triggers in JS files
-  prefixes: [
-    'import\\s+.*?from\\s+[\'"]', // import foo from '
-    'require\\([\'"]', // require('
-    'define\\(\\[?[\'"]' // define([' or define('
-  ],
-  extensions: ['js', 'jsx', 'ts', 'coffee'], // Only shows JS / TS / Coffee files
-  relative: true, // Inserts relative paths only - defaults to true
-  includeCurrentDirectory: true, // Include './' in path - defaults to true
-  projectRelativePath: false, // Includes full relative path starting after the project directory
-  replaceOnInsert: [ // Replaces the file extensions on insert
-    ['.jsx?$', ''],
-    ['.ts$', ''],
-    ['.coffee$', '']
-  ]
-}
-```
+- `autocomplete-paths:rebuild-cache`: rescan all open project roots.
 
-You can add custom scopes by adding them to your `config.cson` file:
+## Configuration
 
-```coffee
-"autocomplete-paths":
-  scopes: [
-    { ... },
-    { ... },
-  ]
-```
+Custom scopes are objects with `scopes`, `prefixes`, and optional `extensions`, `relative`, `includeCurrentDirectory`, `projectRelativePath`, and `replaceOnInsert` properties. All package settings are available in the Settings pane.
+
+## Services
+
+Provides `autocomplete.provider` version `2.0.0` and consumes `status-bar` version `^1.0.0`.
+
+## Contributing
+
+Got ideas to make this package better, found a bug, or want to help add new features? Just drop your thoughts on GitHub. Any feedback is welcome!

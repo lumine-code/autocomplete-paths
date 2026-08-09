@@ -1,0 +1,10 @@
+.autocomplete-paths-image {
+  width: 1.75em;
+  height: 1.75em;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.autocomplete-paths-status {
+  color: var(--text-color-subtle);
+}

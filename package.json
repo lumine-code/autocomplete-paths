@@ -1,54 +1,39 @@
 {
   "name": "autocomplete-paths",
-  "version": "2.17.0",
-  "description": "Adds path autocompletion to autocomplete+",
-  "repository": "https://github.com/atom-community/autocomplete-paths",
+  "author": "lumine-code",
+  "version": "1.0.0",
+  "description": "Complete file paths from cached project contents.",
+  "keywords": [
+    "filesystem",
+    "imports",
+    "suggestions",
+    "completion",
+    "navigation"
+  ],
+  "repository": "https://github.com/lumine-code/autocomplete-paths",
+  "bugs": {
+    "url": "https://github.com/lumine-code/autocomplete-paths/issues"
+  },
   "license": "MIT",
-  "main": "./dist/autocomplete-paths.js",
-  "scripts": {
-    "build": "cross-env NODE_ENV=production parcel build --target main lib/autocomplete-paths.js",
-    "build-commit": "build-commit -o dist",
-    "clean": "shx rm -rf dist .parcel-cache",
-    "dev": "cross-env NODE_ENV=development parcel watch --target main lib/autocomplete-paths.js",
-    "format": "prettier --write .",
-    "lint": "eslint . --fix",
-    "prepare": "npm run build",
-    "test": "atom --test ./spec",
-    "test.format": "prettier . --check",
-    "test.lint": "eslint ."
-  },
-  "prettier": "prettier-config-atomic",
-  "dependencies": {
-    "chokidar": "^3.5.2",
-    "fast-glob": "^3.2.7",
-    "globify-gitignore": "^0.2.1",
-    "minimatch": "^3.0.4",
-    "slash": "^4.0.0",
-    "underscore": "^1.13.1",
-    "zadeh": "^2.1.0"
-  },
-  "devDependencies": {
-    "@babel/cli": "^7.16.0",
-    "@babel/core": "^7.16.0",
-    "@types/atom": "^1.40.11",
-    "@types/is-valid-path": "^0.1.0",
-    "@types/minimatch": "^5.0.0",
-    "@types/node": "^18.0.0",
-    "@types/underscore": "^1.11.3",
-    "atom-jasmine3-test-runner": "^5.2.9",
-    "babel-preset-atomic": "^5.0.0",
-    "build-commit": "0.1.4",
-    "cross-env": "7.0.3",
-    "eslint": "^8.0.0",
-    "eslint-config-atomic": "^1.16.5",
-    "parcel": "^2.0.1",
-    "prettier-config-atomic": "^3.0.1",
-    "shx": "0.3.4"
-  },
+  "main": "./lib/autocomplete-paths",
+  "files": [
+    "lib",
+    "menus",
+    "spec",
+    "styles"
+  ],
   "engines": {
-    "atom": ">0.50.0"
+    "lumine": "^1.0.0"
   },
-  "atomTestRunner": "./spec/runner.js",
+  "backgroundTips": [
+    "Refresh project path suggestions with the autocomplete-paths cache rebuild command"
+  ],
+  "scripts": {
+    "test": "lumine --test spec",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
   "consumedServices": {
     "status-bar": {
       "versions": {
@@ -63,19 +48,90 @@
       }
     }
   },
-  "targets": {
-    "main": {
-      "context": "electron-renderer",
-      "engines": {
-        "electron": ">=5.x"
-      },
-      "includeNodeModules": {
-        "atom": false,
-        "zadeh": false,
-        "fsevents": false
-      },
-      "outputFormat": "commonjs",
-      "isLibrary": true
+  "configSchema": {
+    "normalizeSlashes": {
+      "title": "Normalize Slashes",
+      "description": "Use forward slashes in inserted paths on every platform.",
+      "type": "boolean",
+      "default": true
+    },
+    "maxFileCount": {
+      "title": "Maximum Files",
+      "description": "Maximum number of files cached for each project root.",
+      "type": "integer",
+      "minimum": 1,
+      "default": 10000
+    },
+    "suggestionPriority": {
+      "title": "Suggestion Priority",
+      "description": "Priority reported to the autocomplete service.",
+      "type": "number",
+      "default": 2
+    },
+    "followSymlinks": {
+      "title": "Follow Symbolic Links",
+      "description": "Follow directory links while scanning project roots.",
+      "type": "boolean",
+      "default": false
+    },
+    "imagePreview": {
+      "title": "Image Previews",
+      "description": "Display image thumbnails in path suggestions.",
+      "type": "boolean",
+      "default": false
+    },
+    "ignoredNames": {
+      "title": "Use Core Ignored Names",
+      "description": "Exclude entries matched by the core ignored-names setting.",
+      "type": "boolean",
+      "default": true
+    },
+    "ignoreSubmodules": {
+      "title": "Ignore Submodules",
+      "description": "Exclude paths reported as repository submodules.",
+      "type": "boolean",
+      "default": false
+    },
+    "ignoredPatterns": {
+      "title": "Additional Ignored Patterns",
+      "description": "Glob patterns excluded from path suggestions.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "string"
+      }
+    },
+    "ignoreBuiltinScopes": {
+      "title": "Ignore Built-in Scopes",
+      "description": "Use only custom scope definitions.",
+      "type": "boolean",
+      "default": false
+    },
+    "scopes": {
+      "title": "Custom Scopes",
+      "description": "Additional scope, prefix, extension, and replacement definitions.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object"
+      }
+    },
+    "enableHtmlSupport": {
+      "title": "HTML Attribute Support",
+      "description": "Suggest paths inside common HTML path attributes.",
+      "type": "boolean",
+      "default": false
     }
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.2.2",
+    "globals": "^17.9.0",
+    "prettier": "^3.9.6"
   }
 }
