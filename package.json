@@ -26,7 +26,7 @@
     "lumine": "^1.0.0"
   },
   "backgroundTips": [
-    "Refresh project path suggestions with the autocomplete-paths cache rebuild command"
+    "{% if keys['autocomplete-paths:rebuild-cache'] %}You can rebuild project path suggestions with {{ 'autocomplete-paths:rebuild-cache' | keystroke }}{% else %}You can rebuild cached project path suggestions from the Packages menu.{% endif %}"
   ],
   "scripts": {
     "test": "lumine --test spec",
@@ -96,10 +96,10 @@
       "title": "Additional Ignored Patterns",
       "description": "Glob patterns excluded from path suggestions.",
       "type": "array",
-      "default": [],
       "items": {
         "type": "string"
-      }
+      },
+      "default": []
     },
     "ignoreBuiltinScopes": {
       "title": "Ignore Built-in Scopes",
@@ -111,10 +111,10 @@
       "title": "Custom Scopes",
       "description": "Additional scope, prefix, extension, and replacement definitions.",
       "type": "array",
-      "default": [],
       "items": {
         "type": "object"
-      }
+      },
+      "default": []
     },
     "enableHtmlSupport": {
       "title": "HTML Attribute Support",

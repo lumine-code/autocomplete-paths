@@ -21,13 +21,21 @@ Commands available in `lumine-workspace`:
 
 - `autocomplete-paths:rebuild-cache`: rescan all open project roots.
 
-## Configuration
+## Customization
 
-Custom scopes are objects with `scopes`, `prefixes`, and optional `extensions`, `relative`, `includeCurrentDirectory`, `projectRelativePath`, and `replaceOnInsert` properties. All package settings are available in the Settings pane.
+Adjust suggestion image previews in your `styles.css`:
+
+```css
+.autocomplete-paths-image {
+  width: 2em;
+  height: 2em;
+}
+```
 
 ## Services
 
-Provides `autocomplete.provider` version `2.0.0` and consumes `status-bar` version `^1.0.0`.
+- **autocomplete.provider** (`2.0.0`): provided to autocomplete hubs for project path suggestions.
+- **status-bar** (`^1.0.0`): consumed to report project cache scanning progress.
 
 ## Contributing
 
