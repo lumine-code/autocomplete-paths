@@ -33,6 +33,11 @@ describe("autocomplete-paths", () => {
     });
   }
 
+  it("implements the Lumine autocomplete provider contract", () => {
+    expect(provider.scopeSelector).toBe("*");
+    expect(provider.selector).toBeUndefined();
+  });
+
   it("caches eligible project files", () => {
     const files = provider.pathsCache.getFilePathsForProjectDirectory(projectDirectory);
     expect(files.some((filePath) => filePath.endsWith(path.join("somedir", "testfile.js")))).toBe(

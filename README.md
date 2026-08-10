@@ -34,7 +34,7 @@ Adjust suggestion image previews in your `styles.css`:
 
 ## Services
 
-- **autocomplete.provider** (`2.0.0`): provided to autocomplete hubs for project path suggestions.
+- **autocomplete.provider** (`1.0.0`): provided to autocomplete hubs for project path suggestions.
 - **status-bar** (`^1.0.0`): consumed to report project cache scanning progress.
 
 ## Contributing
