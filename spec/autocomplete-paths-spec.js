@@ -1,5 +1,4 @@
 const path = require("node:path");
-const { it, beforeEach } = require("./async-spec-helpers");
 
 describe("autocomplete-paths", () => {
   let editor;
