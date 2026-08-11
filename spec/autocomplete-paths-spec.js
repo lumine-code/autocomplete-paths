@@ -88,6 +88,50 @@ describe("autocomplete-paths", () => {
     // is in the index but must not be offered.
     expect(suggestions.every(({ displayText }) => !displayText.includes("tests/"))).toBe(true);
   });
+
+  describe("the path-syntax trigger", () => {
+    // `./` and `../` are a path in any language, so they trigger everywhere
+    // rather than only inside a language's import statement.
+    it("completes a relative path written in a comment", async () => {
+      const suggestions = await suggestionsFor("// see ../somedir/testf");
+      expect(suggestions.map(({ text }) => text)).toContain("../somedir/testfile.js");
+    });
+
+    it("keeps the extension a language scope would have stripped", async () => {
+      // The JavaScript scope's replaceOnInsert drops `.js` because an import
+      // does not want it; prose does.
+      const inComment = await suggestionsFor("// ../somedir/testf");
+      const inImport = await suggestionsFor("require('../somedir/testf");
+      expect(inComment[0].text).toBe("../somedir/testfile.js");
+      expect(inImport[0].text).toBe("../somedir/testfile");
+    });
+
+    it("does not offer a file twice when a language scope also matches", async () => {
+      const suggestions = await suggestionsFor("require('../somedir/testf");
+      const texts = suggestions.map(({ text }) => text);
+      // `require('../` satisfies both the JavaScript scope and the generic
+      // trigger, and the results are flattened together.
+      expect(new Set(texts).size).toBe(texts.length);
+    });
+
+    it("takes the last path on the line, not the first", async () => {
+      // `prefixes` are applied with String#match, which returns the first hit —
+      // an unanchored trigger would treat everything after `./a.js` as the path.
+      const suggestions = await suggestionsFor("// ./a.js and ../somedir/testf");
+      expect(suggestions.map(({ text }) => text)).toContain("../somedir/testfile.js");
+    });
+
+    it("offers nothing once the path leaves the project root", async () => {
+      const suggestions = await suggestionsFor("// ../../../../../");
+      expect(suggestions).toEqual([]);
+    });
+
+    it("stays quiet on text that merely contains a dot or an at-sign", async () => {
+      expect(await suggestionsFor("// version 3.5 released")).toEqual([]);
+      expect(await suggestionsFor("// mail someone@example.com")).toEqual([]);
+      expect(await suggestionsFor(" * @param {String} value")).toEqual([]);
+    });
+  });
 });
 
 // Keeping the index unbuilt in a window that never completes a path is the whole

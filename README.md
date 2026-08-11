@@ -5,6 +5,7 @@ Complete file paths from the project file index.
 ## Features
 
 - **Import completion**: suggests matching project files in JavaScript, TypeScript, CSS, HTML, PHP, Python, Ruby, Lua, and C-family paths.
+- **Anywhere else**: typing `./` or `../` completes a path in any file type, so paths in comments, configuration and prose work the same way.
 - **Relative paths**: inserts paths relative to the active file and optionally includes the current-directory prefix.
 - **Project paths**: supports project-root-relative suggestions for custom scope definitions.
 - **Live project index**: reads the editor's shared file index, so suggestions follow the filesystem as files come and go.
