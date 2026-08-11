@@ -2,7 +2,7 @@
   "name": "autocomplete-paths",
   "author": "lumine-code",
   "version": "1.0.0",
-  "description": "Complete file paths from cached project contents.",
+  "description": "Complete file paths from the project file index.",
   "keywords": [
     "filesystem",
     "imports",
@@ -55,24 +55,11 @@
       "type": "boolean",
       "default": true
     },
-    "maxFileCount": {
-      "title": "Maximum Files",
-      "description": "Maximum number of files cached for each project root.",
-      "type": "integer",
-      "minimum": 1,
-      "default": 10000
-    },
     "suggestionPriority": {
       "title": "Suggestion Priority",
       "description": "Priority reported to the autocomplete service.",
       "type": "number",
       "default": 2
-    },
-    "followSymlinks": {
-      "title": "Follow Symbolic Links",
-      "description": "Follow directory links while scanning project roots.",
-      "type": "boolean",
-      "default": false
     },
     "imagePreview": {
       "title": "Image Previews",
@@ -80,21 +67,9 @@
       "type": "boolean",
       "default": false
     },
-    "ignoredNames": {
-      "title": "Use Core Ignored Names",
-      "description": "Exclude entries matched by the core ignored-names setting.",
-      "type": "boolean",
-      "default": true
-    },
-    "ignoreSubmodules": {
-      "title": "Ignore Submodules",
-      "description": "Exclude paths reported as repository submodules.",
-      "type": "boolean",
-      "default": false
-    },
     "ignoredPatterns": {
       "title": "Additional Ignored Patterns",
-      "description": "Glob patterns excluded from path suggestions.",
+      "description": "Paths matching these glob patterns are left out of path suggestions. The editor's Ignored Names and VCS-ignore settings already apply to the shared project index; these narrow it further for suggestions alone.",
       "type": "array",
       "items": {
         "type": "string"
@@ -122,9 +97,6 @@
       "type": "boolean",
       "default": false
     }
-  },
-  "dependencies": {
-    "fast-glob": "^3.3.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

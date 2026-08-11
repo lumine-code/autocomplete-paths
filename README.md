@@ -1,14 +1,14 @@
 # autocomplete-paths
 
-Complete file paths from cached project contents.
+Complete file paths from the project file index.
 
 ## Features
 
 - **Import completion**: suggests matching project files in JavaScript, TypeScript, CSS, HTML, PHP, Python, Ruby, Lua, and C-family paths.
 - **Relative paths**: inserts paths relative to the active file and optionally includes the current-directory prefix.
 - **Project paths**: supports project-root-relative suggestions for custom scope definitions.
-- **Incremental cache**: updates created, renamed, and deleted files from Lumine project events.
-- **Ignore handling**: respects repository ignores, core ignored names, submodules, and custom glob patterns.
+- **Live project index**: reads the editor's shared file index, so suggestions follow the filesystem as files come and go.
+- **Ignore handling**: inherits the editor's ignored names and VCS-ignore rules, and narrows them further with custom glob patterns.
 - **Image previews**: can show local image thumbnails directly in suggestions.
 
 ## Installation
