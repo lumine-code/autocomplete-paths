@@ -57,9 +57,9 @@
     },
     "suggestionPriority": {
       "title": "Suggestion Priority",
-      "description": "Priority reported to the autocomplete service.",
+      "description": "Priority reported to the autocomplete service. Above the 2 a language server reports, so that an explicitly typed path outranks a general identifier list -- this provider only answers when a path prefix actually matched, so it never displaces anything otherwise.",
       "type": "number",
-      "default": 2
+      "default": 3
     },
     "imagePreview": {
       "title": "Image Previews",

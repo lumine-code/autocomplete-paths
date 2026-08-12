@@ -131,6 +131,16 @@ describe("autocomplete-paths", () => {
       expect(await suggestionsFor("// mail someone@example.com")).toEqual([]);
       expect(await suggestionsFor(" * @param {String} value")).toEqual([]);
     });
+
+    it("outranks a language server's completions", () => {
+      // Providers are ordered by suggestionPriority, and the tiebreak is scope
+      // specificity — which a `*` selector always loses. At an equal priority a
+      // language server's whole identifier list would therefore be concatenated
+      // ahead of the paths and bury them, which is why this sits above the 2 an
+      // LSP provider reports. Safe because this provider answers with nothing
+      // at all unless a path prefix matched.
+      expect(provider.suggestionPriority).toBeGreaterThan(2);
+    });
   });
 });
 
