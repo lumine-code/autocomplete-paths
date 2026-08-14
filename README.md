@@ -14,7 +14,7 @@ Complete file paths from the project file index.
 
 ## Installation
 
-To install `autocomplete-paths` search for _autocomplete-paths_ in the Install pane of the Lumine settings or run `lumine --install lumine-code/autocomplete-paths`.
+To install `autocomplete-paths` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/autocomplete-paths`.
 
 ## Commands
 
@@ -35,8 +35,8 @@ Adjust suggestion image previews in your `styles.css`:
 
 ## Services
 
-- **autocomplete.provider** (`1.0.0`): provided to autocomplete hubs for project path suggestions.
-- **status-bar** (`^1.0.0`): consumed to report project cache scanning progress.
+- `autocomplete.provider`: provided to autocomplete hubs for project path suggestions.
+- `status-bar`: consumed to report project cache scanning progress.
 
 ## Contributing
 
