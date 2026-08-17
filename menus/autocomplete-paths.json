@@ -4,8 +4,13 @@
       "label": "Packages",
       "submenu": [
         {
-          "label": "Rebuild Path Suggestions",
-          "command": "autocomplete-paths:rebuild-cache"
+          "label": "Autocomplete Paths",
+          "submenu": [
+            {
+              "label": "Rebuild Path Suggestions",
+              "command": "autocomplete-paths:rebuild-cache"
+            }
+          ]
         }
       ]
     }
