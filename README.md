@@ -9,7 +9,7 @@ Complete file paths from the project file index.
 - **Relative paths**: inserts paths relative to the active file and optionally includes the current-directory prefix.
 - **Project paths**: supports project-root-relative suggestions for custom scope definitions.
 - **Live project index**: reads the editor's shared file index, so suggestions follow the filesystem as files come and go.
-- **Ignore handling**: inherits the editor's ignored names and VCS-ignore rules, and narrows them further with custom glob patterns.
+- **Ignore handling**: inherits the editor's ignored names and VCS-ignore rules, and narrows them further with package-specific ignored names using the same glob syntax.
 - **Image previews**: can show local image thumbnails directly in suggestions.
 
 ## Installation

@@ -6,7 +6,7 @@ describe("autocomplete-paths", () => {
   let projectDirectory;
 
   beforeEach(async () => {
-    lumine.config.set("autocomplete-paths.ignoredPatterns", ["**/tests/**"]);
+    lumine.config.set("autocomplete-paths.ignoredNames", ["tests"]);
     lumine.config.set("core.excludeVcsIgnoredPaths", false);
     jasmine.attachToDOM(lumine.workspace.getElement());
 
@@ -82,11 +82,20 @@ describe("autocomplete-paths", () => {
     expect(suggestions.every(({ text }) => text.startsWith("../somedir/"))).toBe(true);
   });
 
-  it("excludes its own ignored patterns from suggestions", async () => {
+  it("excludes its own ignored names from suggestions", async () => {
     const suggestions = await suggestionsFor("require('test");
-    // The fixture lives under `tests/`, which `ignoredPatterns` names — the file
+    // The fixture lives under `tests/`, which `ignoredNames` names — the file
     // is in the index but must not be offered.
     expect(suggestions.every(({ displayText }) => !displayText.includes("tests/"))).toBe(true);
+  });
+
+  it("rebuilds only its filtered cache when ignored names change", async () => {
+    spyOn(lumine.project, "refreshFilePaths").and.callThrough();
+    lumine.config.set("autocomplete-paths.ignoredNames", []);
+
+    const suggestions = await suggestionsFor("require('test");
+    expect(suggestions.map(({ displayText }) => displayText)).toContain("tests/test-file.js");
+    expect(lumine.project.refreshFilePaths).not.toHaveBeenCalled();
   });
 
   describe("the path-syntax trigger", () => {
@@ -148,13 +157,25 @@ describe("autocomplete-paths", () => {
 // point of taking the subscription late, and it is a property a single
 // well-meaning call in `activate` would quietly destroy.
 describe("autocomplete-paths laziness", () => {
-  let provider;
+  let emitIndex, indexed, provider;
 
   beforeEach(async () => {
     jasmine.attachToDOM(lumine.workspace.getElement());
-    spyOn(lumine.project, "observeFilePaths").and.callFake(() => ({ dispose() {} }));
+    indexed = [];
+    let callback = null;
+    spyOn(lumine.project, "observeFilePaths").and.callFake((fn) => {
+      callback = fn;
+      fn({ added: indexed.slice(), removed: [], indexing: false });
+      return { dispose: () => (callback = null) };
+    });
+    spyOn(lumine.project, "getFilePathsForRoot").and.callFake(() => indexed);
+    emitIndex = ({ added = [], removed = [], indexing = false }) => {
+      indexed = indexed.filter((filePath) => !removed.includes(filePath)).concat(added);
+      callback?.({ added, removed, indexing });
+    };
     const pack = await lumine.packages.activatePackage("autocomplete-paths");
     provider = pack.mainModule.getProvider();
+    spyOn(provider, "buildFilteredCache").and.callThrough();
   });
 
   it("does not touch the file index when the provider is constructed", () => {
@@ -178,6 +199,7 @@ describe("autocomplete-paths laziness", () => {
 
     expect(suggestions).toEqual([]);
     expect(lumine.project.observeFilePaths).not.toHaveBeenCalled();
+    expect(lumine.project.getFilePathsForRoot).not.toHaveBeenCalled();
   });
 
   it("takes the subscription on the first request that matches a path scope", async () => {
@@ -197,5 +219,22 @@ describe("autocomplete-paths laziness", () => {
     });
 
     expect(lumine.project.observeFilePaths).toHaveBeenCalled();
+    expect(provider.buildFilteredCache).toHaveBeenCalledTimes(1);
+
+    await provider.getSuggestions({
+      editor,
+      bufferPosition: cursor.getBufferPosition(),
+      scopeDescriptor: cursor.getScopeDescriptor(),
+      prefix: "test",
+    });
+    expect(provider.buildFilteredCache).toHaveBeenCalledTimes(1);
+
+    const rootPath = lumine.project.getDirectories()[0].getPath();
+    const addedPath = path.join(rootPath, "added.js");
+    emitIndex({ added: [addedPath] });
+    expect(provider.pathsForRoot(rootPath).has(addedPath)).toBe(true);
+
+    emitIndex({ removed: [addedPath] });
+    expect(provider.pathsForRoot(rootPath).has(addedPath)).toBe(false);
   });
 });

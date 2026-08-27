@@ -67,8 +67,8 @@
       "type": "boolean",
       "default": false
     },
-    "ignoredPatterns": {
-      "title": "Additional Ignored Patterns",
+    "ignoredNames": {
+      "title": "Additional Ignored Names",
       "description": "Paths matching these glob patterns are left out of path suggestions. The editor's Ignored Names and VCS-ignore settings already apply to the shared project index; these narrow it further for suggestions alone.",
       "type": "array",
       "items": {
