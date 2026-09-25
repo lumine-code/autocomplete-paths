@@ -25,26 +25,28 @@
   "engines": {
     "lumine": "^1.0.0"
   },
-  "backgroundTips": [
-    "{% if keys['autocomplete-paths:rebuild-cache'] %}You can rebuild project path suggestions with {{ 'autocomplete-paths:rebuild-cache' | keystroke }}{% else %}You can rebuild cached project path suggestions from the Packages menu.{% endif %}"
-  ],
   "scripts": {
     "test": "lumine --test spec",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
-  "consumedServices": {
-    "status-bar": {
-      "versions": {
-        "^1.0.0": "consumeStatusBar"
-      }
-    }
-  },
   "providedServices": {
     "autocomplete.provider": {
       "versions": {
         "1.0.0": "getProvider"
+      }
+    },
+    "background-tips.provider": {
+      "versions": {
+        "1.0.0": "provideBackgroundTips"
+      }
+    }
+  },
+  "consumedServices": {
+    "status-bar": {
+      "versions": {
+        "^1.0.0": "consumeStatusBar"
       }
     }
   },
