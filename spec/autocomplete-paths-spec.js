@@ -32,14 +32,14 @@ describe("autocomplete-paths", () => {
     });
   }
 
-  async function suggestionsFor(text) {
+  async function suggestionsFor(text, position = [0, Infinity], scopes = null) {
     editor.setText(text);
-    editor.setCursorBufferPosition([0, Infinity]);
+    editor.setCursorBufferPosition(position);
     const cursor = editor.getLastCursor();
     return provider.getSuggestions({
       editor,
       bufferPosition: cursor.getBufferPosition(),
-      scopeDescriptor: cursor.getScopeDescriptor(),
+      scopeDescriptor: scopes ? { getScopesArray: () => scopes } : cursor.getScopeDescriptor(),
       prefix: cursor.getCurrentWordBufferRange
         ? editor.getTextInBufferRange(cursor.getCurrentWordBufferRange())
         : "",
@@ -130,9 +130,154 @@ describe("autocomplete-paths", () => {
       expect(suggestions.map(({ text }) => text)).toContain("../somedir/testfile.js");
     });
 
+    it("completes quoted paths containing spaces and closing brackets", async () => {
+      const prefix = "../somedir/spaced dir [draft]/report ] f";
+      for (const quote of ["'", '"', "`"]) {
+        const suggestions = await suggestionsFor(`// ${quote}${prefix}`);
+        expect(suggestions.map(({ text }) => text)).toContain(
+          "../somedir/spaced dir [draft]/report ] final.js",
+        );
+        expect(suggestions.every(({ replacementPrefix }) => replacementPrefix === prefix)).toBe(
+          true,
+        );
+      }
+    });
+
+    it("keeps language insertion rules for paths containing spaces and brackets", async () => {
+      const prefix = "../somedir/spaced dir [draft]/report ] f";
+      const suggestions = await suggestionsFor(`require('${prefix}`);
+      expect(suggestions.map(({ text }) => text)).toEqual([
+        "../somedir/spaced dir [draft]/report ] final",
+      ]);
+      expect(suggestions[0].replacementPrefix).toBe(prefix);
+    });
+
+    it("completes at a caret before an existing closing quote", async () => {
+      const prefix = "../somedir/spaced dir [draft]/report ] f";
+      const line = `const file = "${prefix}";`;
+      const suggestions = await suggestionsFor(line, [0, line.length - 2]);
+      expect(suggestions.map(({ text }) => text)).toEqual([
+        "../somedir/spaced dir [draft]/report ] final.js",
+      ]);
+      expect(suggestions[0].replacementPrefix).toBe(prefix);
+    });
+
+    it("completes a bare filename containing a closing bracket", async () => {
+      const suggestions = await suggestionsFor("// ../somedir/closing]");
+      expect(suggestions.map(({ text }) => text)).toContain("../somedir/closing].js");
+      expect(suggestions[0].replacementPrefix).toBe("../somedir/closing]");
+    });
+
+    it("keeps balanced brackets inside bare filenames", async () => {
+      const suggestions = await suggestionsFor("// ../somedir/balanced[final]");
+      expect(suggestions.map(({ text }) => text)).toContain("../somedir/balanced[final].js");
+    });
+
+    it("completes bare paths with spaces only as literal filename prefixes", async () => {
+      const suggestions = await suggestionsFor("// ../somedir/spaced dir [draft]/report ] f");
+      expect(suggestions.map(({ text }) => text)).toEqual([
+        "../somedir/spaced dir [draft]/report ] final.js",
+      ]);
+      expect(await suggestionsFor("// ../somedir/spaced dir [draft]/r ] f")).toEqual([]);
+      expect(await suggestionsFor("// ../somedir/testfile.js and more text")).toEqual([]);
+    });
+
+    it("stays inside the explicitly typed directory even when its name contains spaces", async () => {
+      const suggestions = await suggestionsFor("// '../somedir/spaced dir [draft]/");
+      expect(suggestions.map(({ text }) => text)).toEqual([
+        "../somedir/spaced dir [draft]/report ] final.js",
+      ]);
+    });
+
+    it("stops after a matching surrounding bracket closes the bare path", async () => {
+      for (const [open, close] of [
+        ["(", ")"],
+        ["[", "]"],
+        ["{", "}"],
+        ["<", ">"],
+      ]) {
+        expect(await suggestionsFor(`// ${open}../somedir/testf${close}`)).toEqual([]);
+      }
+    });
+
+    it("stops after a quote or statement closes the path", async () => {
+      for (const line of [
+        "// '../somedir/testf'",
+        '// "../somedir/testf"',
+        "// `../somedir/testf`",
+        "// ../somedir/testf;",
+        "require('../somedir/testf')",
+        "require('../somedir/testf');",
+      ]) {
+        expect(await suggestionsFor(line)).toEqual([]);
+      }
+    });
+
+    it("takes the latest open path after a closed quoted path", async () => {
+      const prefix = "../somedir/spaced dir [draft]/report ] f";
+      const suggestions = await suggestionsFor(`// '../somedir/closing].js' and '${prefix}`);
+      expect(suggestions.map(({ text }) => text)).toEqual([
+        "../somedir/spaced dir [draft]/report ] final.js",
+      ]);
+      expect(suggestions[0].replacementPrefix).toBe(prefix);
+    });
+
+    it("uses the generic extension policy after a closed import", async () => {
+      const suggestions = await suggestionsFor("require('../somedir/closing]'); ../somedir/testf");
+      expect(suggestions[0].text).toBe("../somedir/testfile.js");
+      expect(suggestions.every(({ text }) => text.endsWith(".js"))).toBe(true);
+      expect(suggestions[0].replacementPrefix).toBe("../somedir/testf");
+    });
+
+    it("takes the latest open import on a line", async () => {
+      for (const line of [
+        "require('closing]'); require('../somedir/testf",
+        "import old from '../somedir/closing]'; require('../somedir/testf",
+      ]) {
+        const suggestions = await suggestionsFor(line);
+        expect(suggestions[0].text).toBe("../somedir/testfile");
+        expect(suggestions.every(({ text }) => !text.endsWith(".js"))).toBe(true);
+        expect(suggestions[0].replacementPrefix).toBe("../somedir/testf");
+      }
+    });
+
+    it("recognizes parent-directory backslashes and normalizes the inserted path", async () => {
+      const prefix = "..\\somedir\\testf";
+      const suggestions = await suggestionsFor(`// ${prefix}`);
+      expect(suggestions[0].text).toBe("../somedir/testfile.js");
+      expect(suggestions.every(({ text }) => text.startsWith("../somedir/"))).toBe(true);
+      expect(suggestions[0].replacementPrefix).toBe(prefix);
+    });
+
+    it("recognizes current-directory backslashes on every platform", async () => {
+      editor = await lumine.workspace.open(
+        path.join(__dirname, "fixtures", "somedir", "testfile.js"),
+      );
+      const suggestions = await suggestionsFor("// .\\testf");
+      expect(suggestions[0].text).toBe("./testfile.js");
+      expect(suggestions.every(({ text }) => text.startsWith("./"))).toBe(true);
+      expect(suggestions[0].replacementPrefix).toBe(".\\testf");
+    });
+
+    it("matches backslash import queries when inserted slashes are not normalized", async () => {
+      lumine.config.set("autocomplete-paths.normalizeSlashes", false);
+      const prefix = "somedir\\test";
+      const suggestions = await suggestionsFor(`require('${prefix}`);
+      expect(suggestions[0].displayText).toBe(path.join("somedir", "testfile.js"));
+      expect(suggestions[0].text).toBe(path.join("..", "somedir", "testfile"));
+      expect(suggestions[0].replacementPrefix).toBe(prefix);
+    });
+
     it("offers nothing once the path leaves the project root", async () => {
       const suggestions = await suggestionsFor("// ../../../../../");
       expect(suggestions).toEqual([]);
+    });
+
+    it("allows child directories whose names begin with two dots", async () => {
+      const filePath = path.join(projectDirectory.getPath(), "..assets", "asset.js");
+      spyOn(lumine.project, "getFilePathsForRoot").and.returnValue([filePath]);
+      const suggestions = await suggestionsFor("// ../..assets/as");
+      expect(suggestions.map(({ text }) => text)).toEqual(["../..assets/asset.js"]);
     });
 
     it("stays quiet on text that merely contains a dot or an at-sign", async () => {
@@ -149,6 +294,91 @@ describe("autocomplete-paths", () => {
       // LSP provider reports. Safe because this provider answers with nothing
       // at all unless a path prefix matched.
       expect(provider.suggestionPriority).toBeGreaterThan(2);
+    });
+  });
+
+  describe("built-in scope syntax", () => {
+    beforeEach(() => {
+      const rootPath = projectDirectory.getPath();
+      spyOn(lumine.project, "getFilePathsForRoot").and.returnValue([
+        path.join(rootPath, "somedir", "matching.js"),
+        path.join(rootPath, "somedir", "style.css"),
+        path.join(rootPath, "somedir", "image.png"),
+        path.join(rootPath, "somedir", "header.hpp"),
+      ]);
+    });
+
+    it("accepts whitespace around require and dynamic import parentheses", async () => {
+      for (const line of ["require ( 'matching", "import ( 'matching"]) {
+        const suggestions = await suggestionsFor(line);
+        expect(suggestions.map(({ text }) => text)).toEqual(["../somedir/matching"]);
+        expect(suggestions[0].replacementPrefix).toBe("matching");
+      }
+    });
+
+    it("accepts whitespace around HTML path attribute assignments", async () => {
+      lumine.config.set("autocomplete-paths.enableHtmlSupport", true);
+      for (const line of ['<img src = "matching', "<a href = 'matching"]) {
+        const suggestions = await suggestionsFor(line, [0, Infinity], ["text.html.basic"]);
+        expect(suggestions.map(({ text }) => text)).toEqual(["../somedir/matching.js"]);
+        expect(suggestions[0].replacementPrefix).toBe("matching");
+      }
+    });
+
+    it("does not treat an HTML element name as a file path", async () => {
+      lumine.config.set("autocomplete-paths.enableHtmlSupport", true);
+      const suggestions = await suggestionsFor(
+        '<input name = "matching',
+        [0, Infinity],
+        ["text.html.basic"],
+      );
+      expect(suggestions).toEqual([]);
+    });
+
+    it("accepts whitespace before a quoted CSS URL and keeps its image extension", async () => {
+      editor = await lumine.workspace.open(
+        path.join(__dirname, "fixtures", "somedir", "testfile.js"),
+      );
+      const suggestions = await suggestionsFor(
+        "background: url( './im",
+        [0, Infinity],
+        ["source.css"],
+      );
+      expect(suggestions.map(({ text }) => text)).toEqual(["./image.png"]);
+      expect(suggestions[0].replacementPrefix).toBe("./im");
+    });
+
+    it("completes angle-bracket includes only while the include remains open", async () => {
+      const suggestions = await suggestionsFor("#include <header", [0, Infinity], ["source.cpp"]);
+      expect(suggestions.map(({ text }) => text)).toEqual(["../somedir/header.hpp"]);
+      expect(suggestions[0].replacementPrefix).toBe("header");
+      expect(await suggestionsFor("#include <header>", [0, Infinity], ["source.cpp"])).toEqual([]);
+    });
+  });
+
+  describe("custom scope boundaries", () => {
+    beforeEach(() => {
+      lumine.config.set("autocomplete-paths.ignoreBuiltinScopes", true);
+      lumine.config.set("autocomplete-paths.scopes", [
+        {
+          scopes: ["source.js"],
+          prefixes: ["asset\\(['\"]"],
+          extensions: ["js"],
+          relative: true,
+          projectRelativePath: true,
+          replaceOnInsert: [["\\.js$", ".asset"]],
+        },
+      ]);
+    });
+
+    it("validates the latest suffix without losing custom insertion settings", async () => {
+      const suggestions = await suggestionsFor("asset('closing]'); asset('balanced[fi");
+      expect(suggestions.map(({ text }) => text)).toEqual(["somedir/balanced[final].asset"]);
+      expect(suggestions[0].replacementPrefix).toBe("balanced[fi");
+    });
+
+    it("rejects a closed custom scope", async () => {
+      expect(await suggestionsFor("asset('balanced[fi')")).toEqual([]);
     });
   });
 });
