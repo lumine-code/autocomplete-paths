@@ -124,8 +124,7 @@ describe("autocomplete-paths", () => {
     });
 
     it("takes the last path on the line, not the first", async () => {
-      // `prefixes` are applied with String#match, which returns the first hit —
-      // an unanchored trigger would treat everything after `./a.js` as the path.
+      // An earlier path must not extend the replacement range of the active one.
       const suggestions = await suggestionsFor("// ./a.js and ../somedir/testf");
       expect(suggestions.map(({ text }) => text)).toContain("../somedir/testfile.js");
     });
@@ -264,7 +263,9 @@ describe("autocomplete-paths", () => {
       const prefix = "somedir\\test";
       const suggestions = await suggestionsFor(`require('${prefix}`);
       expect(suggestions[0].displayText).toBe(path.join("somedir", "testfile.js"));
-      expect(suggestions[0].text).toBe(path.join("..", "somedir", "testfile"));
+      expect(suggestions[0].text).toBe(
+        path.join("..", "somedir", "testfile").replaceAll("\\", "\\\\"),
+      );
       expect(suggestions[0].replacementPrefix).toBe(prefix);
     });
 

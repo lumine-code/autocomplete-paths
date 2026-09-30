@@ -40,8 +40,12 @@ jobs:
       - run: npm pack --dry-run
 
   integration:
-    name: Lumine integration specs
-    runs-on: ubuntu-latest
+    name: Lumine integration specs on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     timeout-minutes: 60
     env:
       LUMINE_JASMINE_REPORTER: list
@@ -59,6 +63,7 @@ jobs:
           cache: npm
           cache-dependency-path: lumine/package-lock.json
       - name: Install Linux build and headless-display dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update || true
           sudo apt-get install -y xvfb libx11-dev libxkbfile-dev libsecret-1-dev
@@ -67,6 +72,7 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Install editor dependencies
         working-directory: lumine
+        shell: bash
         run: |
           install() { npm ci --ignore-scripts; }
           install || install || install
@@ -76,7 +82,13 @@ jobs:
       - name: Rebuild native modules for Electron
         working-directory: lumine
         run: npm run build
-      - name: Run the Jasmine spec suite
+      - name: Run the Jasmine spec suite with Xvfb
+        if: runner.os == 'Linux'
         working-directory: lumine
         timeout-minutes: 20
         run: xvfb-run --auto-servernum npm start -- --test ../autocomplete-paths/spec
+      - name: Run the Jasmine spec suite
+        if: runner.os != 'Linux'
+        working-directory: lumine
+        timeout-minutes: 20
+        run: npm start -- --test ../autocomplete-paths/spec
