@@ -56,6 +56,16 @@ describe("path text encoding", () => {
     }
   });
 
+  it("preserves escaped POSIX backslashes in project-relative and absolute paths", () => {
+    for (const value of ["a\\b.js", "assets/a\\b.js", "/root/assets/a\\b.js"]) {
+      const expected = path.sep === "\\" ? value.replaceAll("\\", "/") : value;
+      expect(decodePathPrefix({ pathPrefix: encodePath(value, { quote: '"' }), quote: '"' })).toBe(
+        expected,
+      );
+    }
+    expect(decodePathPrefix({ pathPrefix: "assets\\file.js", quote: '"' })).toBe("assets/file.js");
+  });
+
   it("quotes HTML attributes with entities and preserves entity-looking filenames", () => {
     const value = './owner\'s "quoted" &quot; & < >.js';
     for (const quote of ["'", '"']) {
