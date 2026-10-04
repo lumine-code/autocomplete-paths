@@ -2,6 +2,9 @@
 
 Complete file paths from the project file index.
 
+> [!WARNING]
+> **This package is deprecated.** Path completion now ships with [fuzzy-files](https://github.com/lumine-code/fuzzy-files), using the same project files and ignored names as its finder. This repository is archived and no longer maintained.
+
 ## Features
 
 - **Import completion**: suggests matching project files in JavaScript, TypeScript, CSS, HTML, PHP, Python, Ruby, Lua, and C-family paths.
@@ -13,9 +16,9 @@ Complete file paths from the project file index.
 - **Ignore handling**: inherits the editor's ignored names and VCS-ignore rules, and narrows them further with package-specific ignored names using the same glob syntax.
 - **Image previews**: can show local image thumbnails directly in suggestions.
 
-## Installation
+## Migration
 
-To install `autocomplete-paths` search for it in the Install pane of the Lumine settings, or run the command `lumine --install lumine-code/autocomplete-paths`.
+Disable or uninstall `autocomplete-paths` and install `fuzzy-files`. Keep `autocomplete` installed to display suggestions. Path-completion preferences now live under `fuzzy-files.pathCompletion`; use `fuzzy-files.ignoredNames` to exclude files from both the finder and suggestions, and `fuzzy-files:refresh` to refresh the shared project index. No settings from this deprecated package are migrated automatically.
 
 ## Commands
 
