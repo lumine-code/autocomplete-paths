@@ -2,6 +2,8 @@
 
 Complete file paths from the project file index.
 
+Fork of [atom-community/autocomplete-paths](https://github.com/atom-community/autocomplete-paths).
+
 > [!WARNING]
 > **This package is deprecated.** Path completion now ships with [fuzzy-files](https://github.com/lumine-code/fuzzy-files), using the same project files and ignored names as its finder. This repository is archived and no longer maintained.
 
